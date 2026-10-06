@@ -25,12 +25,11 @@ interface AuditHeadSectionProps {
 
   /* Footer */
   infoCards: AuditInfoCard[];
-  onExport: (kind: "Compliance Report" | "Log Data") => void;
 }
 
 export default function AuditHeadSection({
   title = "Cryptographically Verified Audit Trail",
-  description = "Immutable record of all platform actions, policy decisions, and human approvals. Verified using HMAC signatures.",
+  description = "Audit events returned by the control plane, including their HMAC signatures. Signature verification is not exposed by the current API.",
   search,
   onSearchChange,
   dateRange,
@@ -42,7 +41,6 @@ export default function AuditHeadSection({
   onToggleSort,
   onViewDetails,
   infoCards,
-  onExport,
 }: AuditHeadSectionProps) {
   return (
     <div className="w-full rounded-xl border border-slate-800/60 bg-slate-900 p-4 font-sans shadow-sm sm:p-6">
@@ -93,7 +91,7 @@ export default function AuditHeadSection({
           onViewDetails={onViewDetails}
         />
 
-        <AuditFooterInfo cards={infoCards} onExport={onExport} />
+        <AuditFooterInfo cards={infoCards} />
       </div>
     </div>
   );

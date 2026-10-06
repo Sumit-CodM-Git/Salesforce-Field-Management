@@ -5,84 +5,35 @@ import AuditHeadSection from "./AuditHeadSection";
 import { useToast } from "@/app/Components/Toast/useToast";
 import type { AuditInfoCard, AuditLog } from "./types";
 import { useApiResource } from "@/app/lib/api/useApiResource";
-import { api } from "@/app/lib/api/client";
+import type { AuditLogEntry } from "@/types/governance";
 import { SourceNotice } from "@/app/Components/Governance/GovernancePages";
 import { useRealtime } from "@/app/lib/ws/RealtimeProvider";
 
-/* ---- Mock data — swap with API later ---- */
-const AUDIT_LOGS: AuditLog[] = [
-  {
-    id: 1,
-    timestamp: "08:32:27, 14:35",
-    workflowId: "7129008388",
-    actor: "Developer 3",
-    actionType: "Tool Call:\nsalesforce_deprecate_field",
-    detailsText:
-      '{\n "resource": "1",\n "custom_field_s",\n "resource": "1"\n}',
-    riskTier: "Tier 3 (HITL)",
-    hmacStatus: "Verified",
-  },
-  {
-    id: 2,
-    timestamp: "08:32:27, 14:39",
-    workflowId: "7139003893",
-    actor: "Developer 3",
-    actionType: "Policy Evaluated:\nTier 3 action",
-    riskTier: "Tier 3 (HITL)",
-    hmacStatus: "Verified",
-  },
-  {
-    id: 3,
-    timestamp: "08:32:27, 14:58",
-    workflowId: "7129503886",
-    actor: "Developer 3",
-    actionType: "HITL Approval:\nApproved remediation",
-    riskTier: "Tier 1 (Auto)",
-    hmacStatus: "Unverified",
-  },
-  {
-    id: 4,
-    timestamp: "08:32:27, 14:38",
-    workflowId: "7129803835",
-    actor: "Developer 3",
-    actionType: "Tool Call:\nsalesforce_delete_field",
-    riskTier: "Tier 3 (HITL)",
-    hmacStatus: "Verified",
-  },
-  {
-    id: 5,
-    timestamp: "08:32:27, 14:19",
-    workflowId: "7139003293",
-    actor: "Developer 3",
-    actionType:
-      "Tool Call: salesforce_delete_field\nreferences from <IMAGE 1>, and <IMAGE 0>",
-    detailsText: '{\n "resource": "1...\n}',
-    riskTier: "Tier 3 (HITL)",
-    hmacStatus: "Verified",
-    isAlert: true,
-  },
-];
-
-const INFO_CARDS: AuditInfoCard[] = [
-  {
-    id: "verified",
-    title: "Latest Verified Events",
-    label: "Agent Status:",
-    value: "P3 - HMAC validation in knowledge_runtime …",
-  },
-  {
-    id: "deviations",
-    title: "Critical Policy Deviations",
-    label: "Agent Status:",
-    value: "P3 - HMAC validation in knowledge_runtime …",
-  },
-];
+function toAuditLog(entry: AuditLogEntry): AuditLog {
+  const signature = entry.hmac_signature ?? undefined;
+  return {
+    id: entry.id,
+    timestamp: new Date(entry.created_at).toLocaleString(),
+    workflowId: entry.proposal_id ?? entry.id,
+    actor: entry.actor,
+    actionType: entry.event_type,
+    resource: entry.proposal_id,
+    detailsText: JSON.stringify(entry.payload, null, 2),
+    riskTier:
+      typeof entry.payload.tier === "string"
+        ? entry.payload.tier
+        : "Not supplied",
+    hmacStatus: signature ? "Present" : "Missing",
+    hmacSignature: signature,
+    isAlert: entry.event_type.includes("FAILED") || entry.event_type.includes("DENIED"),
+  };
+}
 
 export default function AuditLogPage() {
-  const source = useApiResource<AuditLog[]>("/audit/events", AUDIT_LOGS);
+  const source = useApiResource<AuditLogEntry[]>("/audit/?limit=100", []);
   const { reload } = source;
   const { subscribe } = useRealtime();
-  const logs = source.data;
+  const logs = useMemo(() => source.data.map(toAuditLog), [source.data]);
   const [search, setSearch] = useState("");
   const [agentFilter, setAgentFilter] = useState("");
   const [dateRange, setDateRange] = useState("");
@@ -109,29 +60,30 @@ export default function AuditLogPage() {
         !agentFilter || l.actor.toLowerCase() === agentFilter.toLowerCase();
       return matchesSearch && matchesAgent;
     });
-    return sortAsc ? rows : [...rows].reverse();
+    return sortAsc ? [...rows].reverse() : rows;
   }, [logs, search, agentFilter, sortAsc]);
 
   const handleViewDetails = (log: AuditLog) => {
-    toast.info(`Workflow ${log.workflowId}`, "Details");
+    toast.info(
+      `Event ${log.id}${log.hmacSignature ? ` · HMAC ${log.hmacSignature}` : " · No HMAC signature returned"}`,
+      "Audit event details",
+    );
   };
 
-  const handleExport = async (kind: "Compliance Report" | "Log Data") => {
-    try {
-      await api("/audit/exports", {
-        method: "POST",
-        body: JSON.stringify({
-          kind,
-          search,
-          agent: agentFilter,
-          dateRange,
-        }),
-      });
-      toast.success(`Export request submitted: ${kind}`, "Audit export");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to export audit data.", "Export failed");
-    }
-  };
+  const infoCards = useMemo<AuditInfoCard[]>(() => [
+    {
+      id: "signed",
+      title: "Events with HMAC",
+      label: "Returned by API:",
+      value: String(source.data.filter((entry) => Boolean(entry.hmac_signature)).length),
+    },
+    {
+      id: "unsigned",
+      title: "Events without HMAC",
+      label: "Returned by API:",
+      value: String(source.data.filter((entry) => !entry.hmac_signature).length),
+    },
+  ], [source.data]);
 
   return (
     <div className="space-y-2">
@@ -150,8 +102,7 @@ export default function AuditLogPage() {
           sortAsc={sortAsc}
           onToggleSort={() => setSortAsc((v) => !v)}
           onViewDetails={handleViewDetails}
-          infoCards={INFO_CARDS}
-          onExport={(kind) => void handleExport(kind)}
+          infoCards={infoCards}
         />
       </div>
     </div>

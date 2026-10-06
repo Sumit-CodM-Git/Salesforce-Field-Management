@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { X } from "lucide-react";
-import { NAV_ITEMS } from "./navigation";        // ← value only
-import type { NavId } from "./navigation";       // ← type only
+import { Moon, Sun, X } from "lucide-react";
+import { NAV_ITEMS } from "./navigation"; // ← value only
+import type { NavId } from "./navigation"; // ← type only
 
 interface LeftSideBarProps {
   activePage: NavId;
@@ -12,6 +12,8 @@ interface LeftSideBarProps {
   /** Mobile drawer state (ignored on lg+) */
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
 }
 
 export default function LeftSideBar({
@@ -19,6 +21,8 @@ export default function LeftSideBar({
   onNavigate,
   mobileOpen,
   onCloseMobile,
+  theme,
+  onToggleTheme,
 }: LeftSideBarProps) {
   /* Close mobile drawer on Escape */
   useEffect(() => {
@@ -104,6 +108,23 @@ export default function LeftSideBar({
             </button>
           );
         })}
+
+        <div className="mt-auto border-t border-slate-800 pt-3">
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            aria-pressed={theme === "light"}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800/60 hover:text-slate-100"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-5 w-5 shrink-0" />
+            ) : (
+              <Moon className="h-5 w-5 shrink-0" />
+            )}
+            <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+          </button>
+        </div>
       </aside>
     </>
   );

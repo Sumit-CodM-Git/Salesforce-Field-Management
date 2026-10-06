@@ -86,7 +86,7 @@ export default function AuditLogTable({
                   <RiskBadge tier={log.riskTier} />
                 </Cell>
                 <Cell>
-                  <HmacBadge status={log.hmacStatus} />
+                  <HmacBadge status={log.hmacStatus} signature={log.hmacSignature} />
                 </Cell>
               </tr>
             ))}
@@ -141,7 +141,7 @@ export default function AuditLogTable({
               >
                 View Details
               </button>
-              <HmacBadge status={log.hmacStatus} />
+              <HmacBadge status={log.hmacStatus} signature={log.hmacSignature} />
             </div>
           </li>
         ))}
@@ -220,22 +220,31 @@ function RiskBadge({ tier }: { tier: string }) {
   );
 }
 
-function HmacBadge({ status }: { status: "Verified" | "Unverified" }) {
-  const verified = status === "Verified";
+function HmacBadge({
+  status,
+  signature,
+}: {
+  status: "Present" | "Missing";
+  signature?: string;
+}) {
+  const present = status === "Present";
   return (
     <span
+      title={signature ?? "The backend returned no HMAC signature"}
       className={[
         "inline-flex items-center gap-1 rounded-full px-1.5 py-1 text-[10px] font-medium leading-tight text-white",
-        verified ? "bg-[#429861]" : "bg-[#b54848]",
+        present ? "bg-[#429861]" : "bg-[#b54848]",
       ].join(" ")}
     >
-      {verified ? (
+      {present ? (
         <Lock className="h-3 w-3 shrink-0" />
       ) : (
         <AlertTriangle className="h-3 w-3 shrink-0" />
       )}
       <span className="whitespace-nowrap">
-        {verified ? "Verified (Valid Signature)" : "Unverified (Warning)"}
+        {present
+          ? `Signature present · ${signature?.slice(0, 16)}…`
+          : "Signature missing"}
       </span>
     </span>
   );

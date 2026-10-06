@@ -16,30 +16,28 @@ The frontend is the human oversight layer for the CDM-OS control plane. It is bu
 
 ## Control-plane integration
 
-The API base defaults to `http://localhost:8000/api/v1`; set `NEXT_PUBLIC_API_BASE` to override it. The frontend expects these JSON endpoints:
+The API base defaults to `http://localhost:8000/api/v1`; set `NEXT_PUBLIC_API_BASE` to override it. The pulled FastAPI control plane currently registers only the following routes:
 
 | Method | Path                                          | Purpose                                                                                             |
 | ------ | --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| GET    | `/dashboard/summary`                          | Overview snapshot (`agents`, `approvals`, `spend`, `driftAlerts`, `events`)                         |
-| GET    | `/agents`                                     | Agent collection (`id`, `name`, `skill`, `status`, `tier`, `guardian`, `activity`, `cost`, `model`) |
-| POST   | `/agents/{id}/pause` or `/agents/{id}/resume` | Guardian agent controls                                                                             |
+| POST   | `/proposals/`                                 | Submit an agent tool-call proposal; policy evaluation determines its status                         |
+| GET    | `/proposals/`                                 | List proposals (supports `status`, `agent_id`, `limit`, and `offset`)                              |
 | GET    | `/proposals/queue/pending`                    | Proposals waiting for human approval                                                                |
+| GET    | `/proposals/{proposal_id}`                    | Fetch one proposal                                                                                  |
 | PUT    | `/proposals/{id}/decide`                      | Decide a pending proposal (`decision: APPROVED\|REJECTED`, `reviewer_email`, `reason`)              |
 | POST   | `/proposals/{id}/execute`                     | Execute a `HUMAN_APPROVED` or `POLICY_APPROVED` proposal                                            |
-| GET    | `/audit/events`                               | Audit event collection                                                                              |
-| POST   | `/audit/exports`                              | Create an audit export (`kind` and active filters)                                                  |
-| GET    | `/policies/default`                           | Active policy (`content`, optional `name`)                                                          |
-| POST   | `/policies/pull-requests`                     | Submit a policy proposal (`name`, `content`)                                                        |
-| GET    | `/boardroom/conflicts`                        | Conflict collection (`id`, `title`, `agents`, `severity`, `summary`, `status`)                      |
-| POST   | `/boardroom/conflicts/{id}/decision`          | Arbitration decision (`decision`)                                                                   |
-| GET    | `/costs/summary`                              | Cost summary (`mtd`, `projected`, `perTask`, `remaining`, `items`, `daily`)                         |
-| GET    | `/killswitch/status`                          | Current emergency-stop scopes                                                                       |
-| POST   | `/killswitch`                                 | Audited stop request (`scope`, `target`, `reason`)                                                  |
-| GET    | `/drift`                                      | Drift signal collection                                                                             |
+| GET    | `/agents/`                                    | List registered agents                                                                             |
+| POST   | `/agents/`                                    | Register an agent                                                                                   |
+| GET    | `/agents/{agent_id}`                          | Fetch one agent                                                                                     |
+| PATCH  | `/agents/{agent_id}/status?status=PAUSED`     | Change an agent status (`IDLE`, `RUNNING`, `PAUSED`, `ERROR`, or `TERMINATED`)                     |
+| GET    | `/tools/`                                     | List registered tools and tiers                                                                     |
+| GET    | `/audit/?limit=50`                            | Read recent audit events; accepts `event_type`, `proposal_id`, and `limit` filters                  |
 
-Resource GET views show clearly labeled sample data with a retry notice if the control plane is unavailable; successful API responses replace the sample data. Mutations are never presented as successful unless the API responds successfully.
+The Overview, Agents, Approval Queue, and Audit Trail pages use the supported endpoints above. Proposal creation is performed by an agent or API client via `POST /proposals/`; the Approval Queue only lists and decides pending proposals.
 
-Set `NEXT_PUBLIC_WS_URL` to the control plane WebSocket URL. The default is `ws://localhost:8080/ws`. Events use `{ "type": "event.name", "payload": {} }`. `agent.status_changed` / `agent.updated`, `approval.created` / `approval.updated` or `proposal.created` / `proposal.updated`, `audit.event.created`, `cost.updated`, `drift.alert` / `drift.updated`, and `boardroom.conflict.created` / `boardroom.conflict.updated` refresh the corresponding live views. The provider exposes connection state and event subscriptions and retries a closed connection with backoff.
+The backend does not currently register endpoints for dashboard summary, policy CRUD, digital boardroom, costs, kill-switch scopes, drift, audit export, or WebSockets. Their UI pages identify these gaps and do not send requests to nonexistent routes. The backend policy engine loads YAML policy files at startup; there is no policy-management API yet.
+
+`NEXT_PUBLIC_WS_URL` may be configured for a separate deployment that provides a WebSocket server. The pulled FastAPI backend itself does not expose a WebSocket route.
 
 ## Local development
 

@@ -1,6 +1,6 @@
-export type HmacStatus = "Verified" | "Unverified";
+export type HmacStatus = "Present" | "Missing";
 
-export type RiskTier = "Tier 1 (Auto)" | "Tier 2" | "Tier 3 (HITL)";
+export type RiskTier = string;
 
 export interface AuditLog {
   id: string | number;
@@ -12,6 +12,7 @@ export interface AuditLog {
   detailsText?: string;     // raw JSON snippet
   riskTier: RiskTier;
   hmacStatus: HmacStatus;
+  hmacSignature?: string;
   /** When true → row highlighted as alert */
   isAlert?: boolean;
 }

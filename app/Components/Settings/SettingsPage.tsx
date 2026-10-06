@@ -5,8 +5,9 @@ import { useRealtime } from "@/app/lib/ws/RealtimeProvider";
 
 export default function SettingsPage() {
   const { status } = useRealtime();
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "/control-plane/api";
-  const wsUrl = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080/ws";
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000/api/v1";
+  const wsUrl = process.env.NEXT_PUBLIC_WS_URL ?? "Not configured (no backend WebSocket route)";
 
   return (
     <div className="mx-auto max-w-[1200px] space-y-6">
@@ -15,7 +16,7 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Platform settings</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
           Review service connectivity and configuration boundaries for this dashboard.
-          Agent policies are managed in Policy Manager and agent controls are available in Agents.
+          The backend currently exposes proposal, agent, tool, and audit APIs. Policy and emergency-stop controls depend on additional backend routes.
         </p>
       </header>
 
@@ -42,8 +43,42 @@ export default function SettingsPage() {
           </div>
           <code className="mt-5 block break-all rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs text-slate-300">{wsUrl}</code>
           <p className="mt-3 text-xs text-slate-500">Connection status: <span className={status === "connected" ? "text-emerald-300" : "text-amber-300"}>{status}</span></p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Set <code>NEXT_PUBLIC_WS_URL</code> to use the deployed control-plane event stream.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Set <code>NEXT_PUBLIC_WS_URL</code> for a deployment that provides a WebSocket server. The pulled FastAPI backend does not currently register a WebSocket route.</p>
         </article>
+      </section>
+
+      <section className="rounded-xl border border-slate-800 bg-slate-900/80">
+        <header className="border-b border-slate-800 px-5 py-4">
+          <h2 className="text-sm font-semibold text-slate-100">Endpoints exposed by the pulled backend</h2>
+          <p className="mt-1 text-xs text-slate-500">All paths are relative to the API base above.</p>
+        </header>
+        <div className="grid gap-5 p-5 md:grid-cols-2">
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-300">Proposals</h3>
+            <ul className="space-y-1 font-mono text-xs text-slate-300">
+              <li>POST /proposals/</li>
+              <li>GET /proposals/</li>
+              <li>GET /proposals/queue/pending</li>
+              <li>GET /proposals/{"{proposal_id}"}</li>
+              <li>PUT /proposals/{"{proposal_id}"}/decide</li>
+              <li>POST /proposals/{"{proposal_id}"}/execute</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-300">Agents, tools and audit</h3>
+            <ul className="space-y-1 font-mono text-xs text-slate-300">
+              <li>GET, POST /agents/</li>
+              <li>GET /agents/{"{agent_id}"}</li>
+              <li>PATCH /agents/{"{agent_id}"}/status?status=PAUSED</li>
+              <li>GET /tools/</li>
+              <li>GET /audit/?limit=50</li>
+            </ul>
+          </div>
+        </div>
+        <p className="border-t border-slate-800 px-5 py-3 text-xs leading-5 text-amber-200">
+          Dashboard summary, policy CRUD, boardroom, cost, kill-switch,
+          drift, audit-export, and WebSocket endpoints are not registered.
+        </p>
       </section>
 
       <section className="rounded-xl border border-slate-800 bg-slate-900/80">
@@ -58,7 +93,7 @@ export default function SettingsPage() {
           </div>
           <div className="flex gap-3">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-            <div><h3 className="text-sm font-medium text-slate-200">Governed changes</h3><p className="mt-1 text-xs leading-5 text-slate-500">Policy modifications are submitted for review. Approval decisions and emergency actions include an operator reason and are sent to the audited API.</p></div>
+            <div><h3 className="text-sm font-medium text-slate-200">Governed changes</h3><p className="mt-1 text-xs leading-5 text-slate-500">Proposal decisions include a reviewer email and reason. Agent status changes use the registered status endpoint; scoped emergency controls are not available in this backend.</p></div>
           </div>
         </div>
       </section>

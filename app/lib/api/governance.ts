@@ -10,7 +10,6 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? DEFAULT_API_BASE;
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
-  console.log('url =======> governance.ts ', url);
 
   const response = await fetch(url, {
     ...init,
@@ -104,7 +103,6 @@ export const GovernanceAPI = {
     return request<Agent[]>("/agents/");
   },
 
-  // ─── new ───
   getAgent: async (agentId: string): Promise<Agent> => {
     return request<Agent>(`/agents/${encodeURIComponent(agentId)}`);
   },
@@ -115,7 +113,17 @@ export const GovernanceAPI = {
       body: JSON.stringify(payload),
     });
   },
-  // ───────────
+
+  updateAgentStatus: async (
+    agentId: string,
+    status: Agent["status"],
+  ): Promise<{ agent_id: string; status: Agent["status"] }> => {
+    const query = new URLSearchParams({ status });
+    return request<{ agent_id: string; status: Agent["status"] }>(
+      `/agents/${encodeURIComponent(agentId)}/status?${query.toString()}`,
+      { method: "PATCH" },
+    );
+  },
 
 // ================================================================================================= Tools
 

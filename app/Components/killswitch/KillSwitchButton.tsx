@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { api } from "@/app/lib/api/client";
+import { GovernanceAPI } from "@/app/lib/api/governance";
 import { useToast } from "@/app/Components/Toast/useToast";
 
 type Scope = "agent" | "pod" | "capability" | "global";
@@ -31,11 +31,11 @@ export default function KillSwitchButton({
     if (phrase !== required || reason.trim().length < 8 || busy) return;
     setBusy(true);
     try {
-      await api("/killswitch", {
-        method: "POST",
-        body: JSON.stringify({ scope, target, reason: reason.trim() }),
-      });
-      toast.success(`Emergency stop requested for ${target}.`, "Kill switch activated");
+      if (scope !== "agent") {
+        throw new Error("The backend only supports changing an individual agent status.");
+      }
+      await GovernanceAPI.updateAgentStatus(target, "PAUSED");
+      toast.success(`Agent ${target} status set to PAUSED.`, "Agent paused");
       setOpen(false);
       setPhrase("");
       setReason("");

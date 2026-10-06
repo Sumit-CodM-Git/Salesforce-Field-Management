@@ -50,8 +50,10 @@ export interface Agent {
   description?: string;
   owner?: string;
   model_primary: string;
+  model_fallback?: string;
   status: "IDLE" | "RUNNING" | "PAUSED" | "ERROR" | "TERMINATED";
   created_at: string;
+  updated_at?: string;
 }
 
 export interface ToolDefinition {
@@ -60,7 +62,7 @@ export interface ToolDefinition {
   name: string;
   description?: string;
   tier: ToolTier;
-  mcp_server: string;
+  mcp_server?: string;
   schema_json?: Record<string, unknown>;
 }
 
@@ -70,6 +72,6 @@ export interface AuditLogEntry {
   actor: string;
   proposal_id?: string;
   payload: Record<string, unknown>;
-  hmac_signature: string;
+  hmac_signature?: string | null;
   created_at: string;
 }

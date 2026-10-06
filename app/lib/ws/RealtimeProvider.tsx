@@ -11,7 +11,7 @@ import {
 } from "react";
 
 export type RealtimeEvent = { type: string; payload: unknown };
-type ConnectionStatus = "connecting" | "connected" | "disconnected";
+type ConnectionStatus = "connecting" | "connected" | "disconnected" | "unconfigured";
 
 const Ctx = createContext<{
   last: RealtimeEvent | null;
@@ -25,7 +25,9 @@ const Ctx = createContext<{
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const [last, setLast] = useState<RealtimeEvent | null>(null);
-  const [status, setStatus] = useState<ConnectionStatus>("connecting");
+  const [status, setStatus] = useState<ConnectionStatus>(() =>
+    process.env.NEXT_PUBLIC_WS_URL ? "connecting" : "unconfigured",
+  );
   const listeners = useRef(new Set<(event: RealtimeEvent) => void>());
 
   const subscribe = useCallback((fn: (event: RealtimeEvent) => void) => {
@@ -34,19 +36,20 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_WS_URL;
+    if (!url) return;
+
     let socket: WebSocket | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
-    let retryDelay = 10000000;
+    let retryDelay = 1000;
 
     const connect = () => {
       if (disposed) return;
       setStatus("connecting");
-      socket = new WebSocket(
-        process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080/ws",
-      );
+      socket = new WebSocket(url);
       socket.onopen = () => {
-        retryDelay = 10000000;
+        retryDelay = 1000;
         setStatus("connected");
       };
       socket.onmessage = (message) => {
