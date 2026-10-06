@@ -10,10 +10,12 @@ import {
   OctagonAlert,
   Activity,
   Settings,
+  ClipboardList,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import ApprovalQueuePage from "../ApprovalQueue/ApprovalQueuePage";
+import ProposalsPage from "../Proposals/ProposalsPage";
 import AuditLogPage from "../AuditLog/AuditLogPage";
 import SettingsPage from "../Settings/SettingsPage";
 import {
@@ -30,6 +32,7 @@ export const NAV_IDS = [
   "Dashboard",
   "Agents",
   "ApprovalQueue",
+  "Proposals",
   "AuditLog",
   "PolicyManager",
   "DigitalBoardroom",
@@ -52,6 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "Dashboard",        label: "Overview",           icon: LayoutDashboard,   Component: OverviewPage },
   { id: "Agents",           label: "Agents",             icon: Bot,               Component: AgentsPage },
   { id: "ApprovalQueue",    label: "Approval Queue",     icon: Users,             Component: ApprovalQueuePage },
+  { id: "Proposals",        label: "Proposals",          icon: ClipboardList,     Component: ProposalsPage },
   { id: "AuditLog",         label: "Audit Trail",         icon: FileText,          Component: AuditLogPage },
   { id: "PolicyManager",    label: "Policy Manager",     icon: ShieldCheck,       Component: PolicyPage },
   { id: "DigitalBoardroom", label: "Digital Boardroom",  icon: Scale,             Component: BoardroomPage },

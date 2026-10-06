@@ -55,7 +55,7 @@ export type RegisterAgentPayload = {
 export const GovernanceAPI = {
 // ================================================================================================= Proposals
   getPendingProposals: async (): Promise<Proposal[]> => {
-    return request<Proposal[]>("/proposals/queue/pending");
+    return request<Proposal[]>("/proposals/");
   },
 
   listProposals: async (params?: { status?: string; agent_id?: string }): Promise<Proposal[]> => {

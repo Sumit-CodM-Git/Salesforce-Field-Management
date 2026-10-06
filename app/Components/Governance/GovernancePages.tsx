@@ -10,6 +10,7 @@ import {
   Pause,
   Play,
   Plus, // ← add
+  RotateCcw,
   Search, // ← add
   ShieldCheck,
   X,
@@ -32,7 +33,7 @@ type Agent = {
   name: string;
   skill: string;
   status: AgentStatus;
-  tier: string;
+  // tier: string;
   guardian: string;
   activity: string;
   model: string;
@@ -53,7 +54,7 @@ function toAgentView(agent: ControlPlaneAgent): Agent {
     name: agent.name,
     skill: agent.description ?? "Registered control-plane agent",
     status: agent.status,
-    tier: "Set by registered tools",
+    // tier: "Set by registered tools",
     guardian: agent.owner ?? "Unassigned",
     activity: `Current state: ${agent.status}`,
     model: agent.model_primary,
@@ -230,7 +231,7 @@ function StatusBadge({ status }: { status: AgentStatus }) {
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${tone}`}
     >
       <span
-        className={                `h-1.5 w-1.5 rounded-full ${status === "RUNNING" ? "bg-emerald-400" : status === "ERROR" ? "bg-red-400" : status === "PAUSED" ? "bg-amber-400" : "bg-slate-400"}`}
+        className={`h-1.5 w-1.5 rounded-full ${status === "RUNNING" ? "bg-emerald-400" : status === "ERROR" ? "bg-red-400" : status === "PAUSED" ? "bg-amber-400" : "bg-slate-400"}`}
       />
       {status}
     </span>
@@ -251,13 +252,11 @@ function AgentTable({
       <table className="w-full min-w-[680px] text-left text-sm">
         <thead className="text-[11px] uppercase tracking-wider text-slate-500">
           <tr>
-            {["Agent", "Status", "Tier", "Guardian", "Last activity"].map(
-              (label) => (
-                <th key={label} className="pb-3 pr-4 font-medium">
-                  {label}
-                </th>
-              ),
-            )}
+            {["Agent", "Status", "Guardian", "Last activity"].map((label) => (
+              <th key={label} className="pb-3 pr-4 font-medium">
+                {label}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
@@ -293,16 +292,16 @@ function AgentTable({
                     agent.id === selectedId ? "text-blue-200" : "text-slate-100"
                   }`}
                 >
-                    {agent.name}
-                    <span className="mt-1 block text-xs font-normal text-slate-500">
-                      {agent.skill}
-                    </span>
+                  {agent.name}
+                  <span className="mt-1 block text-xs font-normal text-slate-500">
+                    {agent.skill}
+                  </span>
                 </span>
               </td>
               <td className="py-3 pr-4">
                 <StatusBadge status={agent.status} />
               </td>
-              <td className="py-3 pr-4 text-slate-300">{agent.tier}</td>
+              {/* <td className="py-3 pr-4 text-slate-300">{agent.tier}</td> */}
               <td className="py-3 pr-4 text-slate-300">{agent.guardian}</td>
               <td className="py-3 text-xs text-slate-400">{agent.activity}</td>
             </tr>
@@ -316,7 +315,10 @@ function AgentTable({
 export function OverviewPage() {
   const { last, status, subscribe } = useRealtime();
   const agentsSource = useApiResource<ControlPlaneAgent[]>("/agents/", []);
-  const proposalsSource = useApiResource<Proposal[]>("/proposals/?limit=100", []);
+  const proposalsSource = useApiResource<Proposal[]>(
+    "/proposals/?limit=100",
+    [],
+  );
   const toolsSource = useApiResource<ToolDefinition[]>("/tools/", []);
   const auditSource = useApiResource<AuditLogEntry[]>("/audit/?limit=5", []);
   const agents = agentsSource.data.map(toAgentView);
@@ -345,8 +347,7 @@ export function OverviewPage() {
   };
   const sources = [agentsSource, proposalsSource, toolsSource, auditSource];
   const loading = sources.some((resource) => resource.loading);
-  const error =
-    sources.find((resource) => resource.error)?.error ?? null;
+  const error = sources.find((resource) => resource.error)?.error ?? null;
   useEffect(
     () =>
       subscribe((event) => {
@@ -386,11 +387,7 @@ export function OverviewPage() {
           Realtime {status}
         </div>
       </PageHeading>
-      <SourceNotice
-        loading={loading}
-        error={error}
-        reload={reloadAll}
-      />
+      <SourceNotice loading={loading} error={error} reload={reloadAll} />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric
           label="Agents online"
@@ -437,7 +434,10 @@ export function OverviewPage() {
           {agents.length ? (
             <AgentTable rows={agents} />
           ) : (
-            <EmptyState title="No registered agents" body="The control plane returned no agents." />
+            <EmptyState
+              title="No registered agents"
+              body="The control plane returned no agents."
+            />
           )}
         </Panel>
         <Panel
@@ -474,7 +474,9 @@ export function OverviewPage() {
               </div>
             ))}
             {pendingProposals.length === 0 && (
-              <p className="text-sm text-slate-500">No proposals are awaiting human approval.</p>
+              <p className="text-sm text-slate-500">
+                No proposals are awaiting human approval.
+              </p>
             )}
           </div>
         </Panel>
@@ -500,13 +502,17 @@ export function OverviewPage() {
                         {event.time}
                       </time>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">{event.detail}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {event.detail}
+                    </p>
                   </div>
                 </li>
               ))}
             </ol>
           ) : (
-            <p className="text-sm text-slate-500">No audit events returned by the API.</p>
+            <p className="text-sm text-slate-500">
+              No audit events returned by the API.
+            </p>
           )}
         </Panel>
         <Panel
@@ -542,15 +548,8 @@ export function AgentsPage() {
   // Search state
   const [search, setSearch] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
+  const [searchError, setSearchError] = useState("");
   const [updatingAgentId, setUpdatingAgentId] = useState<string | null>(null);
-
-  // Debounce typed value -> activeQuery (fires as user types)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setActiveQuery(search.trim());
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   // Swap endpoint when a query is active
   const source = useApiResource<ControlPlaneAgent[] | ControlPlaneAgent>(
@@ -583,23 +582,40 @@ export function AgentsPage() {
     [reload, subscribe],
   );
 
-  const runSearch = () => setActiveQuery(search.trim());
+  const runSearch = () => {
+    const query = search.trim();
+    if (!query) {
+      setSearch("");
+      setActiveQuery("");
+      setSearchError("");
+      return;
+    }
+    if (query.length !== 32) {
+      setActiveQuery("");
+      setSearchError("Agent ID must be exactly 32 characters.");
+      return;
+    }
+    setSearchError("");
+    setActiveQuery(query);
+  };
 
   const clearSearch = () => {
     setSearch("");
     setActiveQuery("");
+    setSearchError("");
   };
 
-  const updateAgent = async (agent: Agent, action: "pause" | "resume") => {
+  const updateAgent = async (
+    agent: Agent,
+    action: "pause" | "resume" | "start" | "restart",
+  ) => {
     if (updatingAgentId) return;
     setUpdatingAgentId(agent.id);
+    const nextStatus = action === "pause" ? "PAUSED" : "RUNNING";
     try {
-      await GovernanceAPI.updateAgentStatus(
-        agent.agent_id,
-        action === "pause" ? "PAUSED" : "RUNNING",
-      );
+      await GovernanceAPI.updateAgentStatus(agent.agent_id, nextStatus);
       await source.reload();
-      toast.success(`${agent.name} status set to ${action === "pause" ? "PAUSED" : "RUNNING"}`, "Agent control");
+      toast.success(`${agent.name} status set to ${nextStatus}`, "Agent control");
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -611,8 +627,16 @@ export function AgentsPage() {
       setUpdatingAgentId(null);
     }
   };
-  const canChangeStatus =
-    selected?.status === "RUNNING" || selected?.status === "PAUSED";
+  const statusAction =
+    selected?.status === "RUNNING"
+      ? "pause"
+      : selected?.status === "PAUSED"
+        ? "resume"
+        : selected?.status === "IDLE"
+          ? "start"
+          : selected?.status === "TERMINATED"
+            ? "restart"
+            : null;
   const isUpdating = selected?.id === updatingAgentId;
 
   return (
@@ -634,7 +658,7 @@ export function AgentsPage() {
 
       <SourceNotice
         loading={source.loading}
-        error={source.error}
+        error={activeQuery ? null : source.error}
         reload={source.reload}
       />
 
@@ -649,7 +673,11 @@ export function AgentsPage() {
                 <input
                   type="text"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  maxLength={32}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setSearchError("");
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") runSearch();
                     if (event.key === "Escape") clearSearch();
@@ -681,12 +709,23 @@ export function AgentsPage() {
             </div>
           }
         >
-          {agents.length === 0 ? (
+          {searchError ? (
+            <div role="alert" className="px-4 py-3 text-sm text-rose-300">
+              {searchError}
+            </div>
+          ) : activeQuery && source.error ? (
+            <div role="alert" className="px-4 py-3 text-sm text-rose-300">
+              {source.error.toLowerCase().includes("not found") ||
+              source.error.startsWith("404")
+                ? `Agent with ID "${activeQuery}" was not found.`
+                : `Unable to search for agent "${activeQuery}": ${source.error}`}
+            </div>
+          ) : agents.length === 0 ? (
             <EmptyState
               title={activeQuery ? "No agent found" : "No agents registered"}
               body={
                 activeQuery
-                  ? `No agent matches ID "${activeQuery}". Try a different ID or clear the search.`
+                  ? `No agent matches ID "${activeQuery}".`
                   : "Register a new agent to get started."
               }
             />
@@ -706,21 +745,30 @@ export function AgentsPage() {
             action={<StatusBadge status={selected.status} />}
           >
             <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-4">
-              <p className="text-lg font-semibold text-white">{selected.name}</p>
+              <p className="text-lg font-semibold text-white">
+                {selected.name}
+              </p>
               <p className="mt-1 break-all font-mono text-xs text-slate-500">
                 {selected.agent_id}
               </p>
               <p className="mt-3 text-sm leading-5 text-slate-400">
-                {selected.description || "No agent description has been provided."}
+                {selected.description ||
+                  "No agent description has been provided."}
               </p>
             </div>
 
             <dl className="mt-4 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
               <Detail label="Version" value={selected.version} />
-              <Detail label="Owner / guardian" value={selected.owner ?? "Unassigned"} />
+              <Detail
+                label="Owner / guardian"
+                value={selected.owner ?? "Unassigned"}
+              />
               <Detail label="Runtime status" value={selected.status} />
               <Detail label="Primary model" value={selected.model_primary} />
-              <Detail label="Fallback model" value={selected.model_fallback ?? "Not configured"} />
+              <Detail
+                label="Fallback model"
+                value={selected.model_fallback ?? "Not configured"}
+              />
               <Detail
                 label="Created"
                 value={
@@ -743,33 +791,38 @@ export function AgentsPage() {
             <div className="mt-5 flex justify-center border-t border-slate-800 pt-4">
               <button
                 type="button"
-                onClick={() =>
-                  void updateAgent(
-                    selected,
-                    selected.status === "PAUSED" ? "resume" : "pause",
-                  )
-                }
-                disabled={!canChangeStatus || Boolean(updatingAgentId)}
+                onClick={() => {
+                  if (statusAction) void updateAgent(selected, statusAction);
+                }}
+                disabled={!statusAction || Boolean(updatingAgentId)}
                 className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 py-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                  selected.status === "PAUSED"
+                  selected.status === "PAUSED" ||
+                  selected.status === "IDLE" ||
+                  selected.status === "TERMINATED"
                     ? "bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25"
                     : "bg-amber-500/15 text-amber-200 hover:bg-amber-500/25"
                 }`}
               >
                 {isUpdating ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : selected.status === "PAUSED" ? (
+                ) : selected.status === "PAUSED" || selected.status === "IDLE" ? (
                   <Play className="h-3.5 w-3.5" />
+                ) : selected.status === "TERMINATED" ? (
+                  <RotateCcw className="h-3.5 w-3.5" />
                 ) : (
                   <Pause className="h-3.5 w-3.5" />
                 )}
                 {isUpdating
                   ? "Updating status…"
-                  : selected.status === "PAUSED"
-                    ? "Resume agent"
-                    : selected.status === "RUNNING"
-                      ? "Pause agent"
-                      : `Unavailable · ${selected.status}`}
+                  : statusAction === "start"
+                    ? "Start agent"
+                    : statusAction === "restart"
+                      ? "Restart agent"
+                      : statusAction === "resume"
+                        ? "Resume agent"
+                        : statusAction === "pause"
+                          ? "Pause agent"
+                          : `Unavailable · ${selected.status}`}
               </button>
             </div>
           </Panel>
@@ -814,7 +867,10 @@ export function PolicyPage() {
         title="Policy manager"
         description="The control plane loads policy definitions from YAML during startup. This backend does not expose policy read or update endpoints."
       />
-      <Panel title="Policy configuration" subtitle="Backend-managed policy files">
+      <Panel
+        title="Policy configuration"
+        subtitle="Backend-managed policy files"
+      >
         <p className="text-sm leading-6 text-slate-300">
           Policy definitions are stored under{" "}
           <code className="text-blue-200">policy/definitions/</code> and loaded
